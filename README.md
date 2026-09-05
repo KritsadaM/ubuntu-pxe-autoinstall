@@ -1,208 +1,214 @@
 # 🚀 Ubuntu PXE Autoinstall Server
 
-ระบบ **PXE Boot & Autoinstall Server** แบบครบวงจรสำหรับติดตั้ง **Ubuntu 20.04 LTS, 22.04 LTS และ 24.04 LTS** ผ่านระบบเครือข่ายอัตโนมัติ 100% โดยใช้ **Subiquity / Cloud-Init** พร้อมหน้า **Web Dashboard** เพื่อปรับแต่งการตั้งค่าได้อย่างง่ายดาย และรันด้วย **Docker**
+An all-in-one **PXE Boot & Autoinstall Server** for unattended, automated network installation of **Ubuntu 20.04 LTS, 22.04 LTS, and 24.04 LTS** using **Subiquity / Cloud-Init**, featuring a responsive **Web Configuration Dashboard** and fully containerized with **Docker**.
 
 ---
 
-## ✨ จุดเด่นและความสามารถ (Features)
+## ✨ Features
 
-1. **รองรับเครื่องลูกทุกสถาปัตยกรรม (Universal PXE Boot)**:
-   - **Legacy BIOS (x86)**: ใช้ `undionly.kpxe`
-   - **UEFI 64-bit (x86_64)**: ใช้ `ipxe.efi`
-   - ตรวจจับอัตโนมัติผ่าน DHCP Option 93 (`client-arch`)
-2. **iPXE Chaining & HTTP Boot**:
-   - เมื่อเครื่องลูกโหลด iPXE แล้ว จะดึง Menu, Kernel และ Initrd ผ่าน HTTP ทันที เร็วกว่า TFTP ทั่วไปหลายเท่า
-3. **Web Dashboard ปรับแต่งได้ตามต้องการ**:
-   - ปรับแต่ง **Username**, **Password** (ระบบ Hash เป็น `$6$` SHA-512 สำหรับ `/etc/shadow` ให้อัตโนมัติ)
-   - ปรับแต่ง **Hostname**, **Real Name**, **Timezone**
-   - รองรับ **SSH Public Key** สำหรับเข้าระบบแบบไม่ต้องใส่รหัสผ่าน
-   - เลือกระบบเครือข่ายของเครื่องลูก:
-     - **DHCP Mode**: รับ IP อัตโนมัติ
-     - **Static IP Mode**: กำหนด IP/CIDR, Default Gateway และ DNS ถาวร
-   - เลือกติดตั้งแพ็กเกจ APT เริ่มต้น (เช่น `curl`, `wget`, `git`, `htop`, `openssh-server`, `vim`, `docker.io`)
-   - ดูตัวอย่างไฟล์ Subiquity `user-data` และ `boot.ipxe` แบบสดๆ ผ่านหน้าเว็บ
-4. **โหมด DHCP ยืดหยุ่น**:
-   - **Full DHCP Server**: แจก IP ภายในวงเอง (สำหรับวงแล็บหรือระบบแยก)
-   - **ProxyDHCP Mode**: กรณีมี Router เดิมแจก IP อยู่แล้วในเครือข่าย Dnsmasq จะไม่แย่งแจก IP แต่จะส่งเฉพาะข้อมูล PXE Boot ให้เครื่องลูก
-5. **รองรับ Ubuntu 3 เวอร์ชัน LTS**:
+1. **Universal PXE Firmware Support**:
+   - **Legacy BIOS (x86)**: Boots `undionly.kpxe`
+   - **UEFI 64-bit (x86_64)**: Boots `ipxe.efi`
+   - Automatically identified via DHCP Client Architecture matching (Option 93 / `client-arch`).
+2. **iPXE Chaining & High-Speed HTTP Boot**:
+   - iPXE dynamically loads the boot menu, Linux kernel (`vmlinuz`), and initial ramdisk (`initrd`) over HTTP, bypassing slow TFTP throughput.
+3. **Responsive Web Dashboard**:
+   - Configure **Administrator Username** and **Password** (passwords are automatically hashed to SHA-512 `$6$` for `/etc/shadow`).
+   - Configure **Hostname**, **Real Name**, and **Timezone**.
+   - Paste **SSH Authorized Public Keys** for passwordless logins.
+   - Choose target network provisioning:
+     - **Automatic DHCP**: Standard dynamic IP allocation.
+     - **Static IP**: Pre-configure CIDR (`192.168.1.150/24`), Default Gateway, and DNS servers.
+   - Add pre-installed APT packages (e.g., `curl`, `wget`, `git`, `htop`, `openssh-server`, `vim`, `docker.io`).
+   - Inspect live previews of generated Subiquity `user-data` YAML and `boot.ipxe` scripts.
+4. **Flexible DHCP Modes**:
+   - **Full DHCP Server**: Leases IP addresses directly from a specified IP pool (ideal for isolated labs or subnets).
+   - **ProxyDHCP Mode**: Coexists alongside an existing LAN router; responds only with PXE boot parameters without interfering with main DHCP allocations.
+5. **Multi-Version Ubuntu Support**:
    - 🐧 Ubuntu 24.04 LTS (Noble Numbat)
    - 🐧 Ubuntu 22.04 LTS (Jammy Jellyfish)
    - 🐧 Ubuntu 20.04 LTS (Focal Fossa)
 
 ---
 
-## 🏗️ สถาปัตยกรรมการทำงาน (Architecture)
+## 🏗️ Architecture & Boot Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as ผู้ดูแลระบบ (Admin)
+    actor Admin as System Administrator
     participant Web as Web Dashboard (:8080)
-    actor Client as เครื่องลูก (PXE Client)
+    actor Client as PXE Client (Target PC / VM)
     participant Dnsmasq as Dnsmasq (DHCP/TFTP)
     participant iPXE as iPXE Bootloader
-    participant Subiquity as Subiquity Installer
+    participant Subiquity as Ubuntu Installer (Subiquity)
 
-    Admin->>Web: กำหนด Username, Password, Network, SSH Key
+    Admin->>Web: Configure Username, Password, Network, SSH Keys
     Client->>Dnsmasq: 1. DHCP Discover (PXE Boot)
     Dnsmasq-->>Client: 2. DHCP Offer + Option 66/67 (undionly.kpxe / ipxe.efi)
     Client->>Dnsmasq: 3. TFTP Request
-    Dnsmasq-->>Client: 4. ส่ง iPXE Bootloader
-    Client->>iPXE: 5. รัน iPXE
+    Dnsmasq-->>Client: 4. Send iPXE Bootloader
+    Client->>iPXE: 5. Execute iPXE
     iPXE->>Dnsmasq: 6. DHCP Request (User-Class: iPXE)
-    Dnsmasq-->>iPXE: 7. ส่ง HTTP URL -> http://<SERVER_IP>:8080/boot.ipxe
+    Dnsmasq-->>iPXE: 7. Next-Server HTTP URL -> http://<SERVER_IP>:8080/boot.ipxe
     iPXE->>Web: 8. GET /boot.ipxe
-    Web-->>iPXE: 9. ส่ง Dynamic Boot Menu (20.04 / 22.04 / 24.04)
-    Note over iPXE: ผู้ใช้เลือกเวอร์ชัน หรือบูตอัตโนมัติตาม Timeout
-    iPXE->>Web: 10. GET /netboot/{ver}/vmlinuz & initrd (HTTP)
-    Web-->>iPXE: 11. ส่ง Kernel + Initrd
-    iPXE->>Subiquity: 12. บูตเข้า Ubuntu Casper Installer
-    Subiquity->>Web: 13. GET /autoinstall/user-data
-    Web-->>Subiquity: 14. ส่ง Cloud-Init YAML (User, Network, Storage)
-    Subiquity->>Web: 15. GET /iso/ubuntu-*.iso
-    Web-->>Subiquity: 16. สตรีมไฟล์ติดตั้ง ISO
-    Note over Subiquity: ติดตั้งระบบปฏิบัติการลงดิสก์โดยอัตโนมัติ 100%
-    Subiquity->>Client: 17. ติดตั้งเสร็จสิ้น และ Reboot พร้อมใช้งาน
+    Web-->>iPXE: 9. Dynamic Boot Menu (20.04 / 22.04 / 24.04)
+    Note over iPXE: User selects OS or defaults after timeout
+    iPXE->>Web: 10. HTTP GET /netboot/{ver}/vmlinuz & initrd
+    Web-->>iPXE: 11. Stream Kernel + Ramdisk
+    iPXE->>Subiquity: 12. Boot Casper Installer Kernel
+    Subiquity->>Web: 13. HTTP GET /autoinstall/user-data
+    Web-->>Subiquity: 14. Serve Cloud-Init YAML (User, Network, Disk layout)
+    Subiquity->>Web: 15. HTTP GET /iso/ubuntu-*.iso
+    Web-->>Subiquity: 16. Stream ISO Installation Image
+    Note over Subiquity: Automated Unattended Installation into Storage Disk
+    Subiquity->>Client: 17. Complete Installation & Reboot into New OS
 ```
 
 ---
 
-## 📁 โครงสร้างโปรเจกต์ (Project Structure)
+## 📁 Repository Structure
 
 ```text
 ubuntu-pxe-autoinstall/
-├── Dockerfile                  # All-in-One Container (Dnsmasq + Python FastAPI + Supervisor)
-├── docker-compose.yml          # Compose file สำหรับ Linux (Host Networking)
-├── docker-compose.win.yml      # Compose file สำหรับ Windows / Docker Desktop (Port Mapping)
-├── supervisord.conf            # จัดการ Process ให้ Uvicorn และ Dnsmasq ทำงานพร้อมกัน
-├── entrypoint.sh               # สคริปต์ตรวจเช็ค Config และสร้าง /etc/dnsmasq.conf อัตโนมัติ
-├── dnsmasq.conf.template       # เทมเพลตสำหรับ Dnsmasq (DHCP/TFTP/iPXE)
+├── Dockerfile                  # Multi-service container (Dnsmasq + FastAPI + Supervisor)
+├── docker-compose.yml          # Compose specification for Linux (Host Networking)
+├── docker-compose.win.yml      # Compose specification for Windows / Docker Desktop (Port Mapping)
+├── supervisord.conf            # Supervisor daemon running Uvicorn and Dnsmasq
+├── entrypoint.sh               # Container entrypoint configuring /etc/dnsmasq.conf dynamically
+├── dnsmasq.conf.template       # Dnsmasq template for DHCP/TFTP and iPXE chaining
 ├── requirements.txt            # Python dependencies (FastAPI, Uvicorn, Jinja2, etc.)
-├── download_assets.sh          # สคริปต์ดาวน์โหลด ISO & แตก Kernel สำหรับ Linux / Mac / WSL
-├── download_assets.ps1         # สคริปต์ดาวน์โหลด ISO & แตก Kernel สำหรับ Windows PowerShell
+├── download_assets.sh          # Asset downloader for Linux / macOS / WSL
+├── download_assets.ps1         # Asset downloader for Windows PowerShell (Native Disk Mount)
 ├── app/
-│   ├── main.py                 # FastAPI Application + iPXE Generator + ISO/Netboot Static Mount
-│   ├── autoinstall.py          # ตัวสร้าง Subiquity user-data YAML + Pure SHA-512 Hash
+│   ├── main.py                 # FastAPI Application + iPXE Generator + Static Mounts
+│   ├── autoinstall.py          # Subiquity YAML generator + Pure-Python SHA-512 Crypt
 │   └── templates/
-│       └── index.html          # Web Dashboard UI (Tailwind CSS Dark Theme)
-├── data/                       # โฟลเดอร์เก็บข้อมูล Persistent (Mount ใน Docker)
-│   ├── config.json             # ไฟล์บันทึกการตั้งค่าจากหน้าเว็บ
-│   ├── iso/                    # ที่เก็บไฟล์ Ubuntu Live Server ISO
-│   └── netboot/                # ที่เก็บไฟล์ vmlinuz และ initrd แยกตามเวอร์ชัน
+│       └── index.html          # Web Configuration Dashboard (Tailwind CSS Dark Theme)
+├── data/                       # Persistent data directory mounted into Docker
+│   ├── config.json             # Dashboard configuration state
+│   ├── iso/                    # Ubuntu Live Server ISO storage
+│   └── netboot/                # Extracted vmlinuz and initrd directories per version
 │       ├── ubuntu-24.04/
 │       ├── ubuntu-22.04/
 │       └── ubuntu-20.04/
-├── tftpboot/                   # ที่เก็บไฟล์ undionly.kpxe และ ipxe.efi
-└── tests/                      # Automated Unit Tests
-    ├── test_autoinstall.py     # ทดสอบการแปลงรหัสผ่านและการสร้าง YAML
-    └── test_api.py             # ทดสอบ FastAPI Endpoints ทั้งหมด
+├── tftpboot/                   # Bootloader directory (undionly.kpxe, ipxe.efi)
+└── tests/                      # Automated Unit Test Suite
+    ├── test_autoinstall.py     # Subiquity YAML and password hashing tests
+    └── test_api.py             # FastAPI route integration tests
 ```
 
 ---
 
-## 🚀 วิธีการติดตั้งและเริ่มต้นใช้งาน (Quickstart)
+## 🚀 Quickstart Guide
 
-### ขั้นตอนที่ 1: เตรียมไฟล์ ISO และ Kernel
+### Step 1: Download ISOs and Extract Kernels
 
-รันสคริปต์เพื่อดาวน์โหลด Ubuntu ISO ที่ต้องการ และแตกไฟล์ `vmlinuz` / `initrd` เตรียมไว้:
+Run the asset downloader to fetch desired Ubuntu Live Server ISOs and extract `casper/vmlinuz` and `casper/initrd`:
 
-- **บน Linux / macOS / WSL**:
-  ```bash
-  bash download_assets.sh
-  ```
-- **บน Windows (PowerShell)**:
+- **On Windows (PowerShell)**:
   ```powershell
   .\download_assets.ps1
   ```
-*(หากต้องการทดสอบเพียงบางเวอร์ชันก่อน เช่น 24.04 สามารถดาวน์โหลดเฉพาะไฟล์ของเวอร์ชันนั้นได้)*
+- **On Linux / macOS / WSL**:
+  ```bash
+  bash download_assets.sh
+  ```
+*(Note: You can download only the specific versions you plan to install, e.g. Ubuntu 24.04).*
 
 ---
 
-### ขั้นตอนที่ 2: เริ่มการทำงานผ่าน Docker
+### Step 2: Launch Docker Container
 
-1. ตรวจสอบ IP Address ของเครื่องโฮสต์ของคุณ (เช่น `192.168.1.100`)
-2. เริ่มการทำงานของ Docker Container:
+Verify your host machine IP address (e.g., `192.168.1.100`), then launch the container:
 
-**บน Linux Server (แนะนำสำหรับการใช้งานจริงบน Bare-metal)**:
+**On Linux Host (Recommended for bare-metal PXE installs)**:
 ```bash
 docker compose up -d --build
 ```
-> **หมายเหตุสำคัญ**: บน Linux ระบบใช้ `network_mode: host` เพื่อให้ Dnsmasq สามารถรับส่งแพ็กเกจ Layer 2 Broadcast ของ DHCP Discover ได้อย่างสมบูรณ์
+> **Note**: On Linux, `network_mode: host` is used to allow Dnsmasq to bind directly to host network interfaces and process Layer 2 broadcast DHCP Discover packets (`0.0.0.0:67` -> `255.255.255.255:68`).
 
-**บน Windows / Docker Desktop (สำหรับการทดสอบในเครื่อง)**:
+**On Windows / Docker Desktop (For local VM testing)**:
 ```powershell
 docker compose -f docker-compose.win.yml up -d --build
 ```
 
 ---
 
-### ขั้นตอนที่ 3: ตั้งค่าผ่าน Web Dashboard
+### Step 3: Access Web Configuration Dashboard
 
-เปิดเบราว์เซอร์แล้วไปที่:
-👉 **`http://localhost:8080`** หรือ **`http://<SERVER_IP>:8080`**
+Navigate to the dashboard in your web browser:
+👉 **`http://localhost:8080`** or **`http://<SERVER_IP>:8080`**
 
-1. **ตั้งค่า Server & DHCP**:
-   - ใส่ **Server IP** (IP ของเครื่องแม่ข่ายที่เปิดให้เครื่องลูกเข้าถึงได้)
-   - เลือก **DHCP Mode**:
-     - `Full DHCP`: แจก IP เอง
-     - `ProxyDHCP`: หากมีเราเตอร์หลักอยู่แล้ว
-2. **กำหนดข้อมูลเข้าใช้งาน (Target Credentials)**:
-   - ตั้งชื่อเครื่อง (**Hostname**), **Username**, และ **Password**
-   - ใส่ **SSH Public Key** (ถ้ามี)
-3. **เลือกระบบเครือข่ายของเครื่องลูก**:
-   - `DHCP` หรือ `Static IP`
-4. กดปุ่ม **💾 บันทึกการตั้งค่า (Save & Apply)**
-5. สามารถกดปุ่ม **📄 ดูตัวอย่าง user-data** หรือ **⚡ ดูตัวอย่าง boot.ipxe** เพื่อตรวจสอบไฟล์ล่วงหน้าได้ทันที
-
----
-
-## 🧪 การทดสอบ Boot ผ่าน Virtual Machine (VM)
-
-### 1. ทดสอบด้วย VirtualBox:
-1. สร้าง VM ใหม่ (เลือก Type: `Linux`, Version: `Ubuntu (64-bit)`) ไม่ต้องใส่แผ่น CD/ISO
-2. ไปที่ **Settings -> System -> Motherboard**:
-   - ในช่อง **Boot Order** ให้ติ๊กเลือก **Network** และเลื่อนขึ้นมาไว้บนสุด
-   - หากต้องการทดสอบ UEFI ให้ติ๊กที่ **Enable EFI (special OSes only)**
-3. ไปที่ **Settings -> Network**:
-   - เปลี่ยน **Attached to** เป็น **Bridged Adapter** (เลือกการ์ดแลนวงเดียวกับเครื่องโฮสต์)
-   - หรือเลือก **Host-only Adapter** (หากทดสอบภายในเครื่อง)
-4. เปิดเครื่อง VM:
-   - เครื่องจะส่ง DHCP Discover ขอรับ IP
-   - ปรากฏหน้าจอสีฟ้า **Ubuntu Netboot PXE Autoinstall Server**
-   - เลือกรุ่น Ubuntu 24.04, 22.04 หรือ 20.04
-   - ระบบจะดาวน์โหลด Kernel และเริ่มติดตั้งให้อัตโนมัติจนเสร็จสิ้น 100%!
-
-### 2. ทดสอบด้วย VMware Workstation / ESXi:
-1. สร้าง VM ใหม่ และตั้งค่า Network Adapter เป็น **Bridged**
-2. ในการตั้งค่า Boot Options เลือก **Power On to Firmware**
-3. เลือก Boot จาก **Network (PXE)**
-
-### 3. ทดสอบด้วย Proxmox VE:
-1. สร้าง VM ใหม่ ไม่ต้องเลือก ISO
-2. ในแถบ Network เลือก Bridge `vmbr0`
-3. ในแถบ Options ปรับ Boot Order ให้การ์ด Network ขึ้นอันดับ 1
-4. สั่ง Start VM
+1. **PXE & DHCP Server**:
+   - Set **Server IP** (the accessible IP of the machine running Docker).
+   - Select **DHCP Mode**:
+     - `Full DHCP`: Leases IP addresses directly.
+     - `ProxyDHCP`: If an existing router manages DHCP on your subnet.
+2. **Target System Credentials**:
+   - Enter **Target Hostname**, **Username**, and **Password**.
+   - Optionally paste an **SSH Authorized Public Key**.
+3. **Network Addressing Mode**:
+   - Choose `Automatic DHCP` or `Static IP`.
+4. Click **💾 Save & Apply Configuration**.
+5. Use **📄 Preview user-data** and **⚡ Preview boot.ipxe** to inspect generated files in real time.
 
 ---
 
-## 🔍 API Endpoints ที่สำคัญ
+## 🧪 Testing with Virtual Machines (VMs)
 
-| Path | Method | คำอธิบาย |
-|------|--------|----------|
-| `/` | `GET` | หน้าเว็บ Dashboard สำหรับปรับแต่งการตั้งค่า |
-| `/api/config` | `GET` / `POST` | ดูและอัปเดตข้อมูลการตั้งค่า (JSON) |
-| `/api/status` | `GET` | ตรวจสอบสถานะความพร้อมของ ISO และ Kernel ในแต่ละเวอร์ชัน |
-| `/boot.ipxe` | `GET` | ไฟล์สคริปต์เมนูของ iPXE สำหรับเครื่องลูก |
-| `/autoinstall/meta-data` | `GET` | ข้อมูล Instance Metadata สำหรับ Subiquity |
-| `/autoinstall/user-data` | `GET` | ไฟล์ `#cloud-config` สำหรับติดตั้งอัตโนมัติ |
-| `/netboot/{ver}/...` | `GET` | ดาวน์โหลด Kernel `vmlinuz` และ `initrd` |
-| `/iso/...` | `GET` | ให้บริการสตรีมไฟล์ `.iso` สำหรับ Subiquity |
+### VirtualBox:
+1. Create a new VM (`Type: Linux`, `Version: Ubuntu (64-bit)`). Do not attach any ISO media.
+2. Open **Settings -> System -> Motherboard**:
+   - In **Boot Order**, enable **Network** and move it to the top.
+   - For UEFI testing, check **Enable EFI (special OSes only)**.
+3. Open **Settings -> Network**:
+   - Set **Attached to** to **Bridged Adapter** (select your physical active network adapter).
+4. Start the VM:
+   - The VM sends a DHCP discover packet.
+   - The blue iPXE menu appears displaying Ubuntu 24.04, 22.04, and 20.04 options.
+   - The kernel and initrd are retrieved, Subiquity autoinstall runs unattended, and the machine reboots upon completion.
+
+### VMware Workstation / ESXi:
+1. Create a VM and configure the network adapter as **Bridged**.
+2. Open VM settings -> Options -> Boot Options -> check **Power On to Firmware**.
+3. In firmware, select boot from **Network (PXE)**.
+
+### Proxmox VE:
+1. Create a VM without CD/DVD drive.
+2. In the Network tab, select bridge `vmbr0`.
+3. In Options -> Boot Order, set the network device (`net0`) to priority 1.
+4. Start the VM.
 
 ---
 
-## 🛠️ การรัน Unit Tests (Local Testing)
+## 🔍 API Endpoints Reference
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/` | `GET` | Web Dashboard UI for managing settings and inspecting status |
+| `/api/config` | `GET` / `POST` | Retrieve and update JSON configuration |
+| `/api/status` | `GET` | Check availability and readiness of ISOs and netboot kernels |
+| `/boot.ipxe` | `GET` | Dynamic iPXE boot script and menu for PXE clients |
+| `/autoinstall/meta-data` | `GET` | Cloud-init instance metadata for Subiquity |
+| `/autoinstall/user-data` | `GET` | Subiquity autoinstall YAML configuration (`#cloud-config`) |
+| `/netboot/{ver}/...` | `GET` | Static file server streaming `vmlinuz` and `initrd` |
+| `/iso/...` | `GET` | Static file server streaming Ubuntu Live Server ISO files |
+
+---
+
+## 🛠️ Automated Unit Testing
+
+Run the test suite using `pytest`:
 
 ```bash
-# รันการทดสอบ Unit Tests
-python -m pytest tests/ -v
+# Activate virtual environment if using one
+.\.venv\Scripts\pytest.exe tests/ -v
+# or on Linux
+pytest tests/ -v
 ```
+
+All tests verify:
+- Drepper standard glibc SHA-512 crypt hashing (`$6$`).
+- Subiquity autoinstall YAML structure in both DHCP and Static IP modes.
+- FastAPI endpoint responses, status codes, and iPXE script integrity.

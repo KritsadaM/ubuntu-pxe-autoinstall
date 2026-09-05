@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" class="dark">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +7,14 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Sarabun', 'Plus Jakarta Sans', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace'],
           },
           colors: {
@@ -65,10 +65,10 @@
     <div class="mb-8 bg-slate-900/90 rounded-2xl border border-slate-800 p-5 shadow-xl">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-          <span>📦</span> สถานะไฟล์ระบบ (OS Images & Netboot Kernels)
+          <span>📦</span> System Assets & Netboot Status (OS Images & Kernels)
         </h2>
         <button onclick="checkStatus()" class="text-xs text-orange-400 hover:text-orange-300 transition flex items-center gap-1">
-          🔄 รีเฟรชสถานะ
+          🔄 Refresh Status
         </button>
       </div>
 
@@ -110,15 +110,15 @@
         <div class="border-b border-slate-800 pb-4 mb-5 flex items-center justify-between">
           <div>
             <h2 class="text-lg font-bold text-white flex items-center gap-2">
-              <span class="text-orange-500">🌐</span> 1. การตั้งค่า PXE Server & บริการ DHCP
+              <span class="text-orange-500">🌐</span> 1. PXE Server & DHCP Configuration
             </h2>
-            <p class="text-slate-400 text-xs mt-0.5">กำหนด IP ของเครื่องโฮสต์ที่รัน PXE Server และช่วงการแจก IP ให้เครื่องลูก</p>
+            <p class="text-slate-400 text-xs mt-0.5">Configure the host PXE server network address and DHCP pool parameters for clients</p>
           </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Server IP (IP โฮสต์เครื่องนี้)</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Server IP (Host machine IP)</label>
             <input type="text" id="server_ip" value="{{ config.server_ip }}" required class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
           </div>
 
@@ -128,20 +128,20 @@
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">โหมด DHCP</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DHCP Mode</label>
             <select id="dhcp_mode" onchange="toggleDhcpMode()" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
-              <option value="full" {% if config.dhcp_mode == 'full' %}selected{% endif %}>Full DHCP Server (แจก IP เองในวง)</option>
-              <option value="proxy" {% if config.dhcp_mode == 'proxy' %}selected{% endif %}>ProxyDHCP (มี Router แจก IP อยู่แล้ว)</option>
+              <option value="full" {% if config.dhcp_mode == 'full' %}selected{% endif %}>Full DHCP Server (Assigns IPs in subnet)</option>
+              <option value="proxy" {% if config.dhcp_mode == 'proxy' %}selected{% endif %}>ProxyDHCP (Coexists with existing LAN router)</option>
             </select>
           </div>
 
           <div class="dhcp-full-field">
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DHCP IP Start (เริ่มต้น)</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DHCP IP Start</label>
             <input type="text" id="dhcp_range_start" value="{{ config.dhcp_range_start }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
           </div>
 
           <div class="dhcp-full-field">
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DHCP IP End (สิ้นสุด)</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DHCP IP End</label>
             <input type="text" id="dhcp_range_end" value="{{ config.dhcp_range_end }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
           </div>
 
@@ -156,13 +156,13 @@
           </div>
 
           <div class="dhcp-full-field md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DNS Servers (คั่นด้วยจุลภาค)</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DNS Servers (comma separated)</label>
             <input type="text" id="dns" value="{{ config.dns | join(', ') }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
           </div>
         </div>
 
         <div id="proxy-note" class="mt-4 p-3 rounded-xl bg-amber-950/40 border border-amber-800/50 text-amber-300 text-xs hidden">
-          💡 <strong>ProxyDHCP Mode:</strong> Dnsmasq จะไม่แย่งแจก IP แต่จะดักฟัง DHCP Request ของเครื่องลูกและส่งเฉพาะไฟล์ PXE Boot (Next-Server / Bootfile) เหมาะสำหรับเครือข่ายออฟฟิศหรือบ้านที่มี Router หลักอยู่แล้ว
+          💡 <strong>ProxyDHCP Mode:</strong> Dnsmasq will not allocate IP addresses. It listens for client DHCP broadcasts and responds only with PXE boot parameters (Next-Server / Bootfile). Perfect for networks where a primary router already assigns IP addresses.
         </div>
       </section>
 
@@ -170,14 +170,14 @@
       <section class="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl">
         <div class="border-b border-slate-800 pb-4 mb-5">
           <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <span class="text-orange-500">👤</span> 2. บัญชีผู้ใช้ & ความปลอดภัย (Target System Credentials)
+            <span class="text-orange-500">👤</span> 2. Target System Credentials & Identity
           </h2>
-          <p class="text-slate-400 text-xs mt-0.5">ระบบจะนำข้อมูลนี้ไปสร้างผู้ใช้ Administrator และเข้ารหัสผ่านเป็น SHA-512 ($6$) สำหรับ /etc/shadow อัตโนมัติ</p>
+          <p class="text-slate-400 text-xs mt-0.5">Configures administrator account and system identity. Passwords are automatically hashed using SHA-512 ($6$) for /etc/shadow</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Hostname เครื่องที่จะติดตั้ง</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Target Hostname</label>
             <input type="text" id="hostname" value="{{ config.hostname }}" required class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
           </div>
 
@@ -190,14 +190,14 @@
             <div class="flex items-center justify-between mb-1.5">
               <label class="block text-xs font-semibold text-slate-300">Password</label>
               <button type="button" onclick="togglePasswordVisibility()" class="text-xs text-slate-400 hover:text-slate-200">
-                <span id="pwd-toggle-text">👁️ แสดงรหัส</span>
+                <span id="pwd-toggle-text">👁️ Show</span>
               </button>
             </div>
             <input type="password" id="password" value="{{ config.password }}" required class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Real Name (ชื่อเต็ม)</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Real Name</label>
             <input type="text" id="realname" value="{{ config.realname }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
           </div>
 
@@ -208,8 +208,8 @@
         </div>
 
         <div class="mt-5">
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">SSH Authorized Public Key (ทางเลือก)</label>
-          <textarea id="ssh_authorized_key" rows="2" placeholder="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... หรือ ssh-rsa AAAAB3NzaC1yc2E..." class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3 text-xs font-mono text-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">{{ config.ssh_authorized_key }}</textarea>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">SSH Authorized Public Key (Optional)</label>
+          <textarea id="ssh_authorized_key" rows="2" placeholder="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... or ssh-rsa AAAAB3NzaC1yc2E..." class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3 text-xs font-mono text-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">{{ config.ssh_authorized_key }}</textarea>
         </div>
       </section>
 
@@ -217,22 +217,22 @@
       <section class="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl">
         <div class="border-b border-slate-800 pb-4 mb-5">
           <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <span class="text-orange-500">🔌</span> 3. การตั้งค่า Network เครื่องลูก (Installed OS Network)
+            <span class="text-orange-500">🔌</span> 3. Target Machine Network Configuration
           </h2>
-          <p class="text-slate-400 text-xs mt-0.5">กำหนดว่าเมื่อเครื่องลูกติดตั้งเสร็จแล้ว ให้รับ IP แบบใด</p>
+          <p class="text-slate-400 text-xs mt-0.5">Specify how the target machine receives its network configuration post-installation</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">รูปแบบ IP หลังติดตั้งเสร็จ</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Network Addressing Mode</label>
             <select id="network_mode" onchange="toggleStaticFields()" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
-              <option value="dhcp" {% if config.network_mode == 'dhcp' %}selected{% endif %}>รับ IP แบบ DHCP อัตโนมัติ (แนะนำ)</option>
-              <option value="static" {% if config.network_mode == 'static' %}selected{% endif %}>กำหนด Static IP ถาวร</option>
+              <option value="dhcp" {% if config.network_mode == 'dhcp' %}selected{% endif %}>Automatic DHCP (Recommended)</option>
+              <option value="static" {% if config.network_mode == 'static' %}selected{% endif %}>Static IP Assignment</option>
             </select>
           </div>
 
           <div id="static_ip_box" class="{% if config.network_mode != 'static' %}hidden{% endif %}">
-            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Static IP พร้อม CIDR (เช่น 192.168.1.150/24)</label>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Static IP with CIDR (e.g., 192.168.1.150/24)</label>
             <input type="text" id="static_ip" value="{{ config.static_ip }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
           </div>
         </div>
@@ -242,9 +242,9 @@
       <section class="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl">
         <div class="border-b border-slate-800 pb-4 mb-5">
           <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <span class="text-orange-500">📦</span> 4. แพ็กเกจเพิ่มเติม (Pre-installed Packages)
+            <span class="text-orange-500">📦</span> 4. Pre-installed APT Packages
           </h2>
-          <p class="text-slate-400 text-xs mt-0.5">แพ็กเกจ APT ที่จะติดตั้งเพิ่มเติมให้อัตโนมัติ (คั่นด้วยเครื่องหมายจุลภาค)</p>
+          <p class="text-slate-400 text-xs mt-0.5">Additional packages to automatically install during system provisioning (comma separated)</p>
         </div>
 
         <div>
@@ -256,17 +256,17 @@
       <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
         <div class="flex items-center gap-3">
           <button type="submit" id="btn-save" class="bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-orange-600/30 transition duration-150 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2">
-            <span>💾</span> บันทึกการตั้งค่า (Save & Apply)
+            <span>💾</span> Save & Apply Configuration
           </button>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
           <button type="button" onclick="previewUserData()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-4 rounded-xl text-sm border border-slate-700 transition flex items-center gap-1.5">
-            <span>📄</span> ดูตัวอย่าง user-data (YAML)
+            <span>📄</span> Preview user-data (YAML)
           </button>
 
           <button type="button" onclick="previewBootIpxe()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-4 rounded-xl text-sm border border-slate-700 transition flex items-center gap-1.5">
-            <span>⚡</span> ดูตัวอย่าง boot.ipxe
+            <span>⚡</span> Preview boot.ipxe
           </button>
         </div>
       </div>
@@ -284,7 +284,7 @@
         <pre id="modalContent" class="whitespace-pre-wrap"></pre>
       </div>
       <div class="px-6 py-3 border-t border-slate-800 flex justify-end">
-        <button onclick="closeModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm text-slate-200">ปิด</button>
+        <button onclick="closeModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm text-slate-200">Close</button>
       </div>
     </div>
   </div>
@@ -293,7 +293,7 @@
   <div id="toast" class="fixed bottom-6 right-6 z-50 hidden transform transition-all duration-300">
     <div class="bg-emerald-600 text-white font-medium px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-emerald-400/30">
       <span>✅</span>
-      <span id="toast-msg">บันทึกสำเร็จ</span>
+      <span id="toast-msg">Settings saved successfully</span>
     </div>
   </div>
 
@@ -323,10 +323,10 @@
       const toggleText = document.getElementById('pwd-toggle-text');
       if (pwdInput.type === 'password') {
         pwdInput.type = 'text';
-        toggleText.textContent = '🔒 ซ่อนรหัส';
+        toggleText.textContent = '🔒 Hide';
       } else {
         pwdInput.type = 'password';
-        toggleText.textContent = '👁️ แสดงรหัส';
+        toggleText.textContent = '👁️ Show';
       }
     }
 
@@ -373,9 +373,9 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        showToast(data.message || 'บันทึกการตั้งค่าเรียบร้อย');
+        showToast(data.message || 'Configuration saved successfully');
       } catch (err) {
-        alert('เกิดข้อผิดพลาดในการบันทึก: ' + err);
+        alert('Error saving configuration: ' + err);
       }
     }
 
@@ -383,9 +383,9 @@
       try {
         const res = await fetch('/autoinstall/user-data');
         const text = await res.text();
-        openModal('ตัวอย่างไฟล์ Subiquity user-data (Cloud-Init YAML)', text);
+        openModal('Subiquity user-data Preview (Cloud-Init YAML)', text);
       } catch (err) {
-        alert('โหลดไม่สำเร็จ: ' + err);
+        alert('Failed to load user-data: ' + err);
       }
     }
 
@@ -393,9 +393,9 @@
       try {
         const res = await fetch('/boot.ipxe');
         const text = await res.text();
-        openModal('ตัวอย่างไฟล์ boot.ipxe', text);
+        openModal('boot.ipxe Preview', text);
       } catch (err) {
-        alert('โหลดไม่สำเร็จ: ' + err);
+        alert('Failed to load boot.ipxe: ' + err);
       }
     }
 
@@ -421,16 +421,16 @@
           if (badge && detail) {
             if (val.ready) {
               badge.className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-900/80 text-emerald-300 border border-emerald-700';
-              badge.textContent = '✅ พร้อมบูต';
-              detail.textContent = `ISO: ${val.iso_size_mb} MB (Kernel & Initrd พร้อม)`;
+              badge.textContent = '✅ Ready to Boot';
+              detail.textContent = `ISO: ${val.iso_size_mb} MB (Kernel & Initrd ready)`;
             } else if (val.iso_exists) {
               badge.className = 'text-xs px-2 py-0.5 rounded-full bg-amber-900/80 text-amber-300 border border-amber-700';
-              badge.textContent = '⚠️ มี ISO แต่ยังไม่แตก Kernel';
-              detail.textContent = `ISO: ${val.iso_size_mb} MB (รัน download_assets)`;
+              badge.textContent = '⚠️ ISO present, kernel missing';
+              detail.textContent = `ISO: ${val.iso_size_mb} MB (Run download_assets)`;
             } else {
               badge.className = 'text-xs px-2 py-0.5 rounded-full bg-rose-950/80 text-rose-400 border border-rose-800';
-              badge.textContent = '❌ ยังไม่มีไฟล์ ISO';
-              detail.textContent = 'รัน download_assets.sh หรือ .ps1 เพื่อเตรียมไฟล์';
+              badge.textContent = '❌ ISO not found';
+              detail.textContent = 'Run download_assets.sh or .ps1 to prepare files';
             }
           }
         }

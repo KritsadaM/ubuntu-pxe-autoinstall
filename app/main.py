@@ -135,7 +135,7 @@ async def update_config(data: ConfigSchema):
     save_config(cfg)
     return JSONResponse({
         "status": "success",
-        "message": "การตั้งค่าถูกบันทึกเรียบร้อยแล้ว (Configuration saved successfully)",
+        "message": "Configuration saved successfully",
         "config": cfg,
     })
 
