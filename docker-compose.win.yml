@@ -1,0 +1,23 @@
+services:
+  pxe-server:
+    build: .
+    container_name: ubuntu-pxe-server
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "67:67/udp"      # DHCP Port
+      - "69:69/udp"      # TFTP Port
+      - "8080:8080"      # HTTP Port (Web Dashboard & File Server)
+    environment:
+      - SERVER_IP=192.168.1.100       # ระบุ IP ของเครื่องแม่ข่าย Windows บน LAN
+      - HTTP_PORT=8080
+      - DHCP_MODE=full                # 'full' หรือ 'proxy'
+      - DHCP_RANGE_START=192.168.1.200
+      - DHCP_RANGE_END=192.168.1.250
+      - SUBNET_MASK=255.255.255.0
+      - GATEWAY=192.168.1.1
+      - DNS_SERVERS=8.8.8.8,1.1.1.1
+    volumes:
+      - ./data:/data
+      - ./tftpboot:/tftpboot

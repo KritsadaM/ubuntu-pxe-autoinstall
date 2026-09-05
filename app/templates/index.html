@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ubuntu PXE Autoinstall Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sarabun', 'Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            ubuntu: {
+              DEFAULT: '#E95420',
+              dark: '#77216F',
+              aubergine: '#2C001E',
+              orange: '#E95420',
+              hover: '#dd4814',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-ubuntu selection:text-white">
+
+  <!-- Main Container -->
+  <div class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-800 pb-6 mb-8 gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-orange-500/20">
+            🐧
+          </div>
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
+              Ubuntu PXE Autoinstall Server
+            </h1>
+            <p class="text-slate-400 text-sm mt-0.5">
+              DHCP / TFTP + iPXE + Subiquity Cloud-Init (20.04 / 22.04 / 24.04 LTS)
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="server-status" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          PXE Server Online
+        </span>
+      </div>
+    </header>
+
+    <!-- ISO & Asset Status Card -->
+    <div class="mb-8 bg-slate-900/90 rounded-2xl border border-slate-800 p-5 shadow-xl">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+          <span>📦</span> สถานะไฟล์ระบบ (OS Images & Netboot Kernels)
+        </h2>
+        <button onclick="checkStatus()" class="text-xs text-orange-400 hover:text-orange-300 transition flex items-center gap-1">
+          🔄 รีเฟรชสถานะ
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="status-grid">
+        <!-- 24.04 Card -->
+        <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60" id="card-ubuntu-24-04">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-bold text-sm text-white">Ubuntu 24.04 LTS</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300" id="badge-24-04">Checking...</span>
+          </div>
+          <p class="text-xs text-slate-400" id="detail-24-04">Noble Numbat</p>
+        </div>
+
+        <!-- 22.04 Card -->
+        <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60" id="card-ubuntu-22-04">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-bold text-sm text-white">Ubuntu 22.04 LTS</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300" id="badge-22-04">Checking...</span>
+          </div>
+          <p class="text-xs text-slate-400" id="detail-22-04">Jammy Jellyfish</p>
+        </div>
+
+        <!-- 20.04 Card -->
+        <div class="p-4 rounded-xl bg-slate-800/60 border border-slate-700/60" id="card-ubuntu-20-04">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-bold text-sm text-white">Ubuntu 20.04 LTS</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300" id="badge-20-04">Checking...</span>
+          </div>
+          <p class="text-xs text-slate-400" id="detail-20-04">Focal Fossa</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Configuration Form -->
+    <form id="configForm" onsubmit="event.preventDefault(); saveSettings();" class="space-y-6">
+
+      <!-- SECTION 1: PXE & DHCP SERVER -->
+      <section class="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl">
+        <div class="border-b border-slate-800 pb-4 mb-5 flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="text-orange-500">🌐</span> 1. การตั้งค่า PXE Server & บริการ DHCP
+            </h2>
+            <p class="text-slate-400 text-xs mt-0.5">กำหนด IP ของเครื่องโฮสต์ที่รัน PXE Server และช่วงการแจก IP ให้เครื่องลูก</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Server IP (IP โฮสต์เครื่องนี้)</label>
+            <input type="text" id="server_ip" value="{{ config.server_ip }}" required class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">HTTP Server Port</label>
+            <input type="number" id="http_port" value="{{ config.http_port }}" required class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">โหมด DHCP</label>
+            <select id="dhcp_mode" onchange="toggleDhcpMode()" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+              <option value="full" {% if config.dhcp_mode == 'full' %}selected{% endif %}>Full DHCP Server (แจก IP เองในวง)</option>
+              <option value="proxy" {% if config.dhcp_mode == 'proxy' %}selected{% endif %}>ProxyDHCP (มี Router แจก IP อยู่แล้ว)</option>
+            </select>
+          </div>
+
+          <div class="dhcp-full-field">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DHCP IP Start (เริ่มต้น)</label>
+            <input type="text" id="dhcp_range_start" value="{{ config.dhcp_range_start }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div class="dhcp-full-field">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DHCP IP End (สิ้นสุด)</label>
+            <input type="text" id="dhcp_range_end" value="{{ config.dhcp_range_end }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div class="dhcp-full-field">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Subnet Mask</label>
+            <input type="text" id="subnet_mask" value="{{ config.subnet_mask }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div class="dhcp-full-field">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Default Gateway</label>
+            <input type="text" id="gateway" value="{{ config.gateway }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div class="dhcp-full-field md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">DNS Servers (คั่นด้วยจุลภาค)</label>
+            <input type="text" id="dns" value="{{ config.dns | join(', ') }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+        </div>
+
+        <div id="proxy-note" class="mt-4 p-3 rounded-xl bg-amber-950/40 border border-amber-800/50 text-amber-300 text-xs hidden">
+          💡 <strong>ProxyDHCP Mode:</strong> Dnsmasq จะไม่แย่งแจก IP แต่จะดักฟัง DHCP Request ของเครื่องลูกและส่งเฉพาะไฟล์ PXE Boot (Next-Server / Bootfile) เหมาะสำหรับเครือข่ายออฟฟิศหรือบ้านที่มี Router หลักอยู่แล้ว
+        </div>
+      </section>
+
+      <!-- SECTION 2: UBUNTU USER & SECURITY -->
+      <section class="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl">
+        <div class="border-b border-slate-800 pb-4 mb-5">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="text-orange-500">👤</span> 2. บัญชีผู้ใช้ & ความปลอดภัย (Target System Credentials)
+          </h2>
+          <p class="text-slate-400 text-xs mt-0.5">ระบบจะนำข้อมูลนี้ไปสร้างผู้ใช้ Administrator และเข้ารหัสผ่านเป็น SHA-512 ($6$) สำหรับ /etc/shadow อัตโนมัติ</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Hostname เครื่องที่จะติดตั้ง</label>
+            <input type="text" id="hostname" value="{{ config.hostname }}" required class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Username (Sudo Admin)</label>
+            <input type="text" id="username" value="{{ config.username }}" required class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold text-slate-300">Password</label>
+              <button type="button" onclick="togglePasswordVisibility()" class="text-xs text-slate-400 hover:text-slate-200">
+                <span id="pwd-toggle-text">👁️ แสดงรหัส</span>
+              </button>
+            </div>
+            <input type="password" id="password" value="{{ config.password }}" required class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Real Name (ชื่อเต็ม)</label>
+            <input type="text" id="realname" value="{{ config.realname }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Timezone</label>
+            <input type="text" id="timezone" value="{{ config.timezone }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+        </div>
+
+        <div class="mt-5">
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">SSH Authorized Public Key (ทางเลือก)</label>
+          <textarea id="ssh_authorized_key" rows="2" placeholder="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... หรือ ssh-rsa AAAAB3NzaC1yc2E..." class="w-full bg-slate-950 border border-slate-700/80 rounded-xl p-3 text-xs font-mono text-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">{{ config.ssh_authorized_key }}</textarea>
+        </div>
+      </section>
+
+      <!-- SECTION 3: TARGET MACHINE NETWORK -->
+      <section class="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl">
+        <div class="border-b border-slate-800 pb-4 mb-5">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="text-orange-500">🔌</span> 3. การตั้งค่า Network เครื่องลูก (Installed OS Network)
+          </h2>
+          <p class="text-slate-400 text-xs mt-0.5">กำหนดว่าเมื่อเครื่องลูกติดตั้งเสร็จแล้ว ให้รับ IP แบบใด</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">รูปแบบ IP หลังติดตั้งเสร็จ</label>
+            <select id="network_mode" onchange="toggleStaticFields()" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+              <option value="dhcp" {% if config.network_mode == 'dhcp' %}selected{% endif %}>รับ IP แบบ DHCP อัตโนมัติ (แนะนำ)</option>
+              <option value="static" {% if config.network_mode == 'static' %}selected{% endif %}>กำหนด Static IP ถาวร</option>
+            </select>
+          </div>
+
+          <div id="static_ip_box" class="{% if config.network_mode != 'static' %}hidden{% endif %}">
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Static IP พร้อม CIDR (เช่น 192.168.1.150/24)</label>
+            <input type="text" id="static_ip" value="{{ config.static_ip }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: PACKAGES -->
+      <section class="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl">
+        <div class="border-b border-slate-800 pb-4 mb-5">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="text-orange-500">📦</span> 4. แพ็กเกจเพิ่มเติม (Pre-installed Packages)
+          </h2>
+          <p class="text-slate-400 text-xs mt-0.5">แพ็กเกจ APT ที่จะติดตั้งเพิ่มเติมให้อัตโนมัติ (คั่นด้วยเครื่องหมายจุลภาค)</p>
+        </div>
+
+        <div>
+          <input type="text" id="packages" value="{{ config.packages | join(', ') }}" class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm font-mono text-slate-100 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none transition">
+        </div>
+      </section>
+
+      <!-- Action Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
+        <div class="flex items-center gap-3">
+          <button type="submit" id="btn-save" class="bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-orange-600/30 transition duration-150 transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2">
+            <span>💾</span> บันทึกการตั้งค่า (Save & Apply)
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="previewUserData()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-4 rounded-xl text-sm border border-slate-700 transition flex items-center gap-1.5">
+            <span>📄</span> ดูตัวอย่าง user-data (YAML)
+          </button>
+
+          <button type="button" onclick="previewBootIpxe()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-4 rounded-xl text-sm border border-slate-700 transition flex items-center gap-1.5">
+            <span>⚡</span> ดูตัวอย่าง boot.ipxe
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal Preview -->
+  <div id="previewModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+        <h3 id="modalTitle" class="font-bold text-lg text-white">Preview</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl p-1">&times;</button>
+      </div>
+      <div class="p-6 overflow-y-auto flex-1 font-mono text-xs text-slate-200 bg-slate-950 m-4 rounded-xl border border-slate-800">
+        <pre id="modalContent" class="whitespace-pre-wrap"></pre>
+      </div>
+      <div class="px-6 py-3 border-t border-slate-800 flex justify-end">
+        <button onclick="closeModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm text-slate-200">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 hidden transform transition-all duration-300">
+    <div class="bg-emerald-600 text-white font-medium px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-emerald-400/30">
+      <span>✅</span>
+      <span id="toast-msg">บันทึกสำเร็จ</span>
+    </div>
+  </div>
+
+  <script>
+    function toggleDhcpMode() {
+      const mode = document.getElementById('dhcp_mode').value;
+      const fullFields = document.querySelectorAll('.dhcp-full-field');
+      const proxyNote = document.getElementById('proxy-note');
+
+      if (mode === 'proxy') {
+        fullFields.forEach(el => el.classList.add('opacity-40', 'pointer-events-none'));
+        proxyNote.classList.remove('hidden');
+      } else {
+        fullFields.forEach(el => el.classList.remove('opacity-40', 'pointer-events-none'));
+        proxyNote.classList.add('hidden');
+      }
+    }
+
+    function toggleStaticFields() {
+      const mode = document.getElementById('network_mode').value;
+      const box = document.getElementById('static_ip_box');
+      box.classList.toggle('hidden', mode !== 'static');
+    }
+
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById('password');
+      const toggleText = document.getElementById('pwd-toggle-text');
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        toggleText.textContent = '🔒 ซ่อนรหัส';
+      } else {
+        pwdInput.type = 'password';
+        toggleText.textContent = '👁️ แสดงรหัส';
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3500);
+    }
+
+    async function saveSettings() {
+      const dnsInput = document.getElementById('dns').value;
+      const dnsList = dnsInput.split(',').map(s => s.trim()).filter(Boolean);
+
+      const pkgsInput = document.getElementById('packages').value;
+      const pkgList = pkgsInput.split(',').map(s => s.trim()).filter(Boolean);
+
+      const payload = {
+        server_ip: document.getElementById('server_ip').value.trim(),
+        http_port: parseInt(document.getElementById('http_port').value) || 8080,
+        dhcp_mode: document.getElementById('dhcp_mode').value,
+        dhcp_range_start: document.getElementById('dhcp_range_start').value.trim(),
+        dhcp_range_end: document.getElementById('dhcp_range_end').value.trim(),
+        subnet_mask: document.getElementById('subnet_mask').value.trim(),
+        gateway: document.getElementById('gateway').value.trim(),
+        dns: dnsList,
+        hostname: document.getElementById('hostname').value.trim(),
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value,
+        realname: document.getElementById('realname').value.trim(),
+        timezone: document.getElementById('timezone').value.trim(),
+        ssh_authorized_key: document.getElementById('ssh_authorized_key').value.trim(),
+        network_mode: document.getElementById('network_mode').value,
+        static_ip: document.getElementById('static_ip').value.trim(),
+        packages: pkgList
+      };
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        showToast(data.message || 'บันทึกการตั้งค่าเรียบร้อย');
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการบันทึก: ' + err);
+      }
+    }
+
+    async function previewUserData() {
+      try {
+        const res = await fetch('/autoinstall/user-data');
+        const text = await res.text();
+        openModal('ตัวอย่างไฟล์ Subiquity user-data (Cloud-Init YAML)', text);
+      } catch (err) {
+        alert('โหลดไม่สำเร็จ: ' + err);
+      }
+    }
+
+    async function previewBootIpxe() {
+      try {
+        const res = await fetch('/boot.ipxe');
+        const text = await res.text();
+        openModal('ตัวอย่างไฟล์ boot.ipxe', text);
+      } catch (err) {
+        alert('โหลดไม่สำเร็จ: ' + err);
+      }
+    }
+
+    function openModal(title, content) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalContent').textContent = content;
+      document.getElementById('previewModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('previewModal').classList.add('hidden');
+    }
+
+    async function checkStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        for (const [key, val] of Object.entries(data)) {
+          const badge = document.getElementById(`badge-${key.replace('ubuntu-', '')}`);
+          const detail = document.getElementById(`detail-${key.replace('ubuntu-', '')}`);
+
+          if (badge && detail) {
+            if (val.ready) {
+              badge.className = 'text-xs px-2 py-0.5 rounded-full bg-emerald-900/80 text-emerald-300 border border-emerald-700';
+              badge.textContent = '✅ พร้อมบูต';
+              detail.textContent = `ISO: ${val.iso_size_mb} MB (Kernel & Initrd พร้อม)`;
+            } else if (val.iso_exists) {
+              badge.className = 'text-xs px-2 py-0.5 rounded-full bg-amber-900/80 text-amber-300 border border-amber-700';
+              badge.textContent = '⚠️ มี ISO แต่ยังไม่แตก Kernel';
+              detail.textContent = `ISO: ${val.iso_size_mb} MB (รัน download_assets)`;
+            } else {
+              badge.className = 'text-xs px-2 py-0.5 rounded-full bg-rose-950/80 text-rose-400 border border-rose-800';
+              badge.textContent = '❌ ยังไม่มีไฟล์ ISO';
+              detail.textContent = 'รัน download_assets.sh หรือ .ps1 เพื่อเตรียมไฟล์';
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Status fetch failed:', e);
+      }
+    }
+
+    // Initialize
+    toggleDhcpMode();
+    checkStatus();
+  </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+# ==============================================================================
+# Dnsmasq PXE & DHCP Configuration Template
+# ==============================================================================
+
+# Disable DNS service (DHCP & TFTP only)
+port=0
+
+# Bind interfaces dynamically
+bind-dynamic
+log-dhcp
+
+# Enable TFTP Server
+enable-tftp
+tftp-root=/tftpboot
+
+# DHCP Client Architecture Matching (DHCP Option 93 / client-arch)
+# 00:00 -> Standard Legacy BIOS x86
+# 00:07 -> EFI Byte Code (x86_64 UEFI)
+# 00:09 -> EFI x86_64 UEFI (Alternative)
+dhcp-match=set:bios,option:client-arch,0
+dhcp-match=set:efi-x86_64,option:client-arch,7
+dhcp-match=set:efi-x86_64,option:client-arch,9
+
+# Stage 1: Initial PXE Boot - Send iPXE Bootloader binary via TFTP
+dhcp-boot=tag:bios,undionly.kpxe,,{{SERVER_IP}}
+dhcp-boot=tag:efi-x86_64,ipxe.efi,,{{SERVER_IP}}
+
+# Stage 2: iPXE Chaining - When iPXE runs, it queries DHCP with User-Class 'iPXE'
+dhcp-userclass=set:ipxe,iPXE
+dhcp-boot=tag:ipxe,http://{{SERVER_IP}}:{{HTTP_PORT}}/boot.ipxe
+
+# Stage 3: DHCP Pool or ProxyDHCP Mode (Dynamically injected by entrypoint.sh)
+{{DHCP_CONFIG}}

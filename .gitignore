@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+log.html
+report.html
+output.xml
+
+# Large ISOs & Netboot files (downloaded via scripts)
+data/iso/*.iso
+data/netboot/**/vmlinuz
+data/netboot/**/initrd
+tftpboot/*.kpxe
+tftpboot/*.efi
+
+# Local data overrides
+data/config.json
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# OS generated files
+.DS_Store
+Thumbs.db
